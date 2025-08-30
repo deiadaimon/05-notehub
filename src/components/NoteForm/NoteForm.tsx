@@ -1,8 +1,9 @@
 import css from "./NoteForm.module.css";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ErrorMessage, Field, Form, Formik, type FormikHelpers } from "formik";
+import { ErrorMessage, Field, Form, Formik } from "formik";
 import { createNote } from "../../services/noteService";
 import * as Yup from "yup";
+import type { NoteTag } from "../../types/note";
 
 interface NoteFormProps {
     onCancel: () => void;
@@ -17,7 +18,7 @@ interface FormValues {
 const initialFormValues: FormValues = {
     title: "",
     content: "",
-    tag: "",
+    tag: "Todo" as NoteTag,
 };
 
 const validationSchema = Yup.object({
@@ -36,30 +37,21 @@ export default function NoteForm({ onCancel }: NoteFormProps) {
     const queryClient = useQueryClient();
 
     const createNoteMutation = useMutation({
-        mutationFn: createNote,
+        mutationFn: (values: FormValues) => createNote(values),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["notes"] });
             onCancel();
         },
     });
 
-    const handleSubmit = (
-        values: FormValues,
-        formikHelpers: FormikHelpers<FormValues>
-    ) => {
-        createNoteMutation.mutate(values, {
-            onSuccess: () => {
-                formikHelpers.resetForm();
-                onCancel();
-            },
-        });
-    };
-
     return (
         <Formik
             initialValues={initialFormValues}
             validationSchema={validationSchema}
-            onSubmit={handleSubmit}
+            onSubmit={(values: FormValues, { resetForm }) => {
+                createNoteMutation.mutate(values);
+                resetForm();
+            }}
         >
             <Form className={css.form}>
             <div className={css.formGroup}>
@@ -77,7 +69,7 @@ export default function NoteForm({ onCancel }: NoteFormProps) {
                     rows={8}
                     className={css.textarea}
                 />
-                <ErrorMessage name="title" className={css.error} component="span" />
+                <ErrorMessage name="content" className={css.error} component="span" />
             </div>
 
             <div className={css.formGroup}>
@@ -89,7 +81,7 @@ export default function NoteForm({ onCancel }: NoteFormProps) {
                     <option value="Meeting">Meeting</option>
                     <option value="Shopping">Shopping</option>
                 </Field>
-                <ErrorMessage name="title" className={css.error} component="span" />
+                <ErrorMessage name="tag" className={css.error} component="span" />
             </div>
 
             <div className={css.actions}>
